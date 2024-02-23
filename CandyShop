@@ -1,0 +1,337 @@
+import sqlite3
+import time
+
+#Luokkien esittely. 
+
+class Candy:
+    def __init__(self,id, name, amount, color, price100g,sweetener, sugar100g, info):
+        self.id= id
+        self.name = name
+        self.amount = amount
+        self.color = color
+        self.price100g = price100g
+        self.sweetener = sweetener
+        self.sugar100g = sugar100g
+        self.info = info
+    def CandyInfo(self):
+        print(self.id,self.name, self.sweetener, self.amount, self.color, self.price100g,self.sugar100g,self.sweetener, self.info)
+
+class Orderrow:
+    def __init__(self,rowid,prodname,quant,pricetotal):
+        self.rowid = rowid
+        self.prodname = prodname
+        self.quant = quant
+        self.pricetotal = pricetotal
+    def orderrowinfo(self):       
+        print(self.rowid, self.prodname, self.quant, self.pricetotal )
+
+class SalesOrders:
+    def __init__(self,salesOrder, customerId, totalPrice):
+        self.salesOrder = salesOrder
+        self.customerId = customerId
+        self.totalprice = totalPrice
+
+class Customer:
+    def __init__(self, name, address, city, postcode, email, phone):
+        self.name  = name
+        self.address  = address
+        self.city = city
+        self.postcode  = postcode
+        self.email  = email
+        self.phone = phone
+
+    #Funktio tuotteiden lisäämiseen 
+def AddCandy():
+        connection = sqlite3.connect("candyshop.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT ID FROM Candy ORDER by ID DESC LIMIT 1")
+        rows = cursor.fetchall()
+        for row in rows:
+            id = ((row[0])+ 1) # viimeisin id haetaan kannasta ja lisätään 1 ettei pääse tulemaan päällekkäisyyksiä
+        
+        name = input("Name of the product? ")
+        sweetener = input("Sweetener? ")
+        sugar = input("Sugar per 100g? ")
+        amount = input("How many g? ")
+        color = input("Color? ")
+        price = input("price? ")
+        info = input("Info ")
+        newcandy = Candy(id,name,sweetener,sugar,amount,color,price,info)
+        newcandy.CandyInfo()
+        #lisätään uusi candy kantaan
+        connection.execute("""
+        INSERT INTO Candy (ID, NAME, AMOUNT, COLOR, PRICE100g,SWEETENER, SUGAR100g, INFO)
+        VALUES (?,?,?,?,?,?,?,?);                                            
+        """,
+        (id,name,amount,color,price,sweetener,sugar,info)
+        ) 
+        connection.commit()
+        connection.close()
+        #vapautetaan muistit koska tuota oliota ei enää käytetä ja jatkossa tiedot haetaan kannasta
+        del newcandy
+
+#listataan tuotteet
+def inventory():
+    connection = sqlite3.connect("candyshop.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM Candy")
+    rows = cursor.fetchall()
+    print("Store inventory:\n")
+    time.sleep(1)
+    for row in rows:
+        print("Id              ", row[0]) # id
+        print("Name            ", row[1]) # name
+        print("Amount in stock ", row[2], "g") # amount
+        print("Color           ", row[3]) # color
+        print("Price per 100g  ", row[4], "€") #price per 100g
+        print("Sugar per 100g  ", row[5], "g") #if sugar
+        print("Sweetener?      ", row[6]) # if afsweetener
+        print("Info            ", row[7]) # info
+        print("================")
+        
+
+        connection.close()   
+
+def Addquantity():
+    inventory()
+    id = input("Id of the product that you wish add\decrease quantity to? ");
+    quantity = int(input("How many grams you wish to add\decrease? "));
+    #Haetaan olemassa oleva määrä ja lisätään tuohon haluttu määrä
+    connection = sqlite3.connect("candyshop.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM candy WHERE id =" + id)
+    rows = cursor.fetchall()
+            #for row in rows:
+    for row in rows:
+        ("amount", row[2]) # amont
+    quantity2 = int(row[2])
+    newAmount = quantity + quantity2
+    print(f"New amount  {newAmount} g")
+
+    connection.execute(
+    """
+    UPDATE Candy 
+    SET amount=? 
+    WHERE id=? 
+    """,
+    (newAmount,id)
+)
+    connection.commit()
+
+    connection.close()
+
+def deleteProduct():
+    inventory()
+    id = input("Id of the product that you wish to delete? ");
+
+    connection = sqlite3.connect("candyshop.db")
+    #cursor = connection.cursor()
+    connection.execute(
+    """
+    DELETE FROM Candy 
+    WHERE id=? 
+    """,
+    (id)
+)
+    connection.commit()
+    connection.close()
+
+
+
+# 1.version of order\orderrow and stock handling
+
+def newOrderRow():
+    print("Hello and welcome.")
+    i = 1
+    global CandyList
+    CandyList = []
+    Totalprice = []
+    makenewline = 1
+    
+    while True:
+        if makenewline == 1:
+            neworderrow = (f"neworderrow{i}")
+            inventory()
+            candyId = input("\nWhat would you like to buy?(Give Id) ")
+            quant = int(input("How many grams would you like to buy? "))
+            connection = sqlite3.connect("candyshop.db")
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM Candy WHERE ID  =" + candyId)
+            rows = cursor.fetchall()
+
+            for row in rows:
+                ("Id", row[0]) # id
+                ("Name", row[1]) # name
+                ("Amount in stock ", row[2], "g") # amount
+                ("Price per 100g ", row[4], "€") #price per 100g
+
+            connection.close()   
+            id = row[0]
+            name = row[1]
+            price100 = float(row[4]/100)
+            price = price100 * quant
+            neworderrow = Orderrow(id, name, quant ,price)
+            CandyList.append(neworderrow)
+            print("\nItems in your shoppingkart : ")
+            print("ID NAME QUANTITY PRICE")
+            for neworderrow in CandyList:
+                print(neworderrow.orderrowinfo())
+                i += 1
+            Totalprice.append(price)
+            global orderTotal
+            orderTotal = sum(Totalprice)
+            makenewline = int(input("1.continue shopping, 2.exit to cashier 3.empty shoppingkart ") )
+
+        elif makenewline == 2:
+            i = 0 
+            print("\nItems in your shoppingkart : ")
+            print("ID NAME QUANTITY PRICE")
+            for neworderrow in CandyList:
+                print(neworderrow.orderrowinfo())
+                i += 1
+            print(f"Total : {orderTotal} €")
+            #for neworderrow in CandyList:
+            connection = sqlite3.connect("candyshop.db")
+            cursor = connection.cursor()
+            cursor.execute("SELECT SALESORDER FROM Salesorder ORDER by SALESORDER DESC LIMIT 1")
+            rows = cursor.fetchall()
+            for row in rows:
+                ("SalesORderID", row[0]) # id
+            connection.close()
+            global idSO 
+            idSO =  ((row[0]) + 1)
+                
+            # Tallennetaan rivit kantaan
+            connection = sqlite3.connect("candyshop.db")
+            cursor = connection.cursor()
+            cursor.execute("SELECT ID FROM OrderRow ORDER by ID DESC LIMIT 1")
+            rows = cursor.fetchall()
+            for row in rows:
+                ("Id", row[0]) # id
+            ix = 1
+            
+            for neworderrow in CandyList:
+                idOR = ((row[0]) + ix) # viimeisin id haetaan kannasta ja lisätään 1 ettei pääse tulemaan päällekkäisyyksiä
+                ix += 1
+                connection.execute("""
+                INSERT INTO OrderRow (ID,SALESORDER,PRODUCT,AMOUNT,PRICE)
+                VALUES (?,?,?,?,?);                                            
+                """,
+                    (idOR,idSO,neworderrow.prodname, neworderrow.quant ,neworderrow.pricetotal))
+                connection.commit()
+                #Haetaan määrä ja päivitetään se
+                prod = ("'" + neworderrow.prodname + "'")
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM Candy WHERE NAME =" + prod)
+                rows = cursor.fetchall()
+                #for row in rows:
+                for row in rows:
+                    ("amount", row[2]) # amont
+                connection.commit()
+                origAmount = int(row[2])
+                amount = origAmount - neworderrow.quant
+                connection.execute(
+                """
+                UPDATE Candy 
+                SET amount=? 
+                WHERE name=? 
+                """,
+                (amount,neworderrow.prodname)
+)
+                connection.commit()  
+            connection.close()
+            makenewline = 3
+            cashier()
+        elif makenewline == 3:
+            break
+
+def cashier():
+#Kysytään asiakastiedot
+    while True:
+        idAS = 0
+        name = input("Name : ")
+        address = input("Street address : ")
+        city = input("City : ")
+        postcode = input("Postcode : ")
+        email = input("Email : ")
+        phone = input("Phone : ")
+        #Haetaan viimeisin custmer id ja lisätään siihen 1
+        connection = sqlite3.connect("candyshop.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT ID FROM Customer ORDER by ID DESC LIMIT 1")
+        rows = cursor.fetchall()
+        for row in rows:
+            idAS = ((row[0])+ 1) # viimeisin id haetaan kannasta ja lisätään 1 ettei pääse tulemaan päällekkäisyyksiä
+        connection.execute("""
+        INSERT INTO Customer (ID,NAME,ADDRESS,CITY,POSTCODE, EMAIL, PHONE)
+        VALUES (?,?,?,?,?,?,?);                                            
+        """,
+        (idAS,name,address,city,postcode, email, phone))
+        connection.commit()
+        connection.close()
+
+        newCustomer = Customer(name,address,city, postcode,email, phone)
+
+        newOrder = SalesOrders(idSO,idAS,orderTotal)
+        #-> SQL
+        connection = sqlite3.connect("candyshop.db")
+        connection.execute("""
+        INSERT INTO SALESORDER(SALESORDER,CUSTOMERID,TOTALPRICE)          
+        VALUES(?,?,?);
+                 """,
+                    (idSO,idAS,orderTotal)                
+    )
+        connection.commit()
+        connection.close()
+        print("\nYour order : ")
+        print(f"\nOrder : {idSO}")
+        print(f"Customer : {idAS} {newCustomer.name}" )
+        print("Address : ")
+        print(newCustomer.address)
+        print(newCustomer.city)
+        print(newCustomer.postcode )
+        print("Contact info : ")
+        print(newCustomer.email )
+        print(newCustomer.phone )
+
+        print("Items : ")
+        for neworderrow in CandyList:
+            print(neworderrow.orderrowinfo())
+        print(F"Total : {orderTotal} €")  
+        del newCustomer
+        print("Thank You, come again!")
+
+        break         
+        
+
+
+#Loop for interactions
+    
+print("Welcome to CandyStore! \n")
+
+custOrshopkeeper = int(input("Are you a 1.customer or 2.shopkeeper? (3.exit) "))
+while custOrshopkeeper>0:
+    if custOrshopkeeper == 1:
+        newOrderRow()
+        break  
+    elif custOrshopkeeper == 2:
+        shopkeeper = int(input("Greetings master. 1.Add new 2.Add quantity 3.Delete 4.Show inventory? (5.exit) "))
+        if shopkeeper == 1:
+            AddCandy()
+        elif shopkeeper == 2:
+            Addquantity()
+        elif shopkeeper == 3:
+            deleteProduct()
+        elif shopkeeper == 4:
+            inventory()
+        elif shopkeeper == 5:
+            break 
+    elif custOrshopkeeper == 3:
+        print("Bye!")
+        break
+
+    
+    
+    
+
+
