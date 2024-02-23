@@ -138,7 +138,7 @@ def deleteProduct():
 
 
 
-# 1.version of order\orderrow and stock handling
+# 1.version of order\orderrow and stock handleding
 
 def newOrderRow():
     print("Hello and welcome.")
@@ -197,7 +197,9 @@ def newOrderRow():
             rows = cursor.fetchall()
             for row in rows:
                 ("SalesORderID", row[0]) # id
+            connection.commit()  
             connection.close()
+           
             global idSO 
             idSO =  ((row[0]) + 1)
                 
@@ -208,10 +210,11 @@ def newOrderRow():
             rows = cursor.fetchall()
             for row in rows:
                 ("Id", row[0]) # id
+            id1 = row[0]
             ix = 1
             
             for neworderrow in CandyList:
-                idOR = ((row[0]) + ix) # viimeisin id haetaan kannasta ja lisätään 1 ettei pääse tulemaan päällekkäisyyksiä
+                idOR = id1 + ix # viimeisin id haetaan kannasta ja lisätään 1 ettei pääse tulemaan päällekkäisyyksiä
                 ix += 1
                 connection.execute("""
                 INSERT INTO OrderRow (ID,SALESORDER,PRODUCT,AMOUNT,PRICE)
@@ -219,7 +222,9 @@ def newOrderRow():
                 """,
                     (idOR,idSO,neworderrow.prodname, neworderrow.quant ,neworderrow.pricetotal))
                 connection.commit()
+                connection.close()
                 #Haetaan määrä ja päivitetään se
+                connection = sqlite3.connect("candyshop.db")
                 prod = ("'" + neworderrow.prodname + "'")
                 cursor = connection.cursor()
                 cursor.execute("SELECT * FROM Candy WHERE NAME =" + prod)
@@ -228,8 +233,10 @@ def newOrderRow():
                 for row in rows:
                     ("amount", row[2]) # amont
                 connection.commit()
+                connection.close()
                 origAmount = int(row[2])
                 amount = origAmount - neworderrow.quant
+                connection = sqlite3.connect("candyshop.db")
                 connection.execute(
                 """
                 UPDATE Candy 
@@ -329,9 +336,3 @@ while custOrshopkeeper>0:
     elif custOrshopkeeper == 3:
         print("Bye!")
         break
-
-    
-    
-    
-
-
